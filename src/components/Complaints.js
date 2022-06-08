@@ -1,15 +1,105 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import s_a from "../data/City";
 import state_arr from "../data/State";
+import { useNavigate } from "react-router-dom";
+import emailjs from "@emailjs/browser";
 
-const Complaints = () => {
+const Complaints = (props) => {
   const [city, setCity] = useState([]);
+  const [complaint, setComplaint] = useState({
+    complaintname: "",
+    email: "",
+    state: "",
+    city: "",
+    complaintregarding: "",
+    complaintnature: "",
+    companyname: "",
+    details: "",
+  });
+
+  let navigate = useNavigate();
 
   const handleCity = (e) => {
     var indexOfState = state_arr.indexOf(e.target.value) + 1;
     var city_arr = s_a[indexOfState].split("|");
     setCity(city_arr);
   };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    // API Call
+    const response = await fetch(
+      "http://localhost:5000/api/complaint/addcomplaint",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          // "auth-token": localStorage.getItem("token"),
+        },
+        body: JSON.stringify({
+          complaintname: complaint.complaintname,
+          email: complaint.email,
+          state: complaint.state,
+          city: complaint.city,
+          complaintregarding: complaint.complaintregarding,
+          complaintnature: complaint.complaintnature,
+          companyname: complaint.companyname,
+          details: complaint.details,
+        }),
+      }
+    );
+
+    const json = await response.json();
+    if (json.success) {
+      props.showAlert("Complaint Submitted successfully", "green");
+      handleEmail();
+      navigate("/");
+    } else {
+      props.showAlert(json.errors[0].msg, "red");
+    }
+  };
+
+  const onChange = (e) => {
+    if (e.target.name === "state") {
+      handleCity(e);
+    }
+    setComplaint({ ...complaint, [e.target.name]: e.target.value });
+  };
+
+  const templateParams = {
+    to_name: "Quickfix Team",
+    complaintname: complaint.complaintname,
+    email: complaint.email,
+    state: complaint.state,
+    city: complaint.city,
+    complaintregarding: complaint.complaintregarding,
+    complaintnature: complaint.complaintnature,
+    companyname: complaint.companyname,
+    details: complaint.details,
+  };
+
+  const handleEmail = async () => {
+    emailjs
+      .send(
+        "service_4j3cbsg",
+        "template_zi82uyh",
+        templateParams,
+        "dDUJ3YFUF4AqhW0VZ"
+      )
+      .then(
+        (response) => {
+          console.log("SUCCESS!", response.status, response.text);
+        },
+        (err) => {
+          console.log("FAILED...", err);
+        }
+      );
+  };
+  useEffect(() => {
+    if (!localStorage.getItem("token")) {
+      navigate("/signin");
+    }
+  }, []);
 
   return (
     <div>
@@ -23,7 +113,7 @@ const Complaints = () => {
               Please complete the form below for your complaints.
             </p>
           </div>
-          <div className="lg:w-1/2 md:w-2/3 mx-auto">
+          <form onSubmit={handleSubmit} className="lg:w-1/2 md:w-2/3 mx-auto">
             <div className="flex flex-wrap -m-2">
               <div className="p-2 w-1/2">
                 <div className="relative">
@@ -35,7 +125,9 @@ const Complaints = () => {
                   </label>
                   <input
                     type="text"
-                    name="name"
+                    required
+                    onChange={onChange}
+                    name="complaintname"
                     className="w-full bg-gray-100 bg-opacity-50 rounded border border-gray-300 focus:border-[#717984] focus:bg-white focus:ring-2 focus:ring-[#717984] text-base outline-none text-gray-700 py-1 px-3 leading-8 transition-colors duration-200 ease-in-out"
                   />
                 </div>
@@ -50,6 +142,8 @@ const Complaints = () => {
                   </label>
                   <input
                     type="email"
+                    onChange={onChange}
+                    required
                     id="email"
                     name="email"
                     className="w-full bg-gray-100 bg-opacity-50 rounded border border-gray-300 focus:border-[#717984] focus:bg-white focus:ring-2 focus:ring-[#717984] text-base outline-none text-gray-700 py-1 px-3 leading-8 transition-colors duration-200 ease-in-out"
@@ -66,9 +160,12 @@ const Complaints = () => {
                     Select State
                   </label>
                   <select
+                    name="state"
                     defaultValue="Select State"
+                    required
+                    onChange={onChange}
                     className="form-select form-select-lg mb-3
-      appearance-none
+                    appearance-none
       block
       w-full
       px-4
@@ -84,7 +181,6 @@ const Complaints = () => {
       m-0
       focus:text-gray-700 focus:bg-white focus:border-blue-600 focus:outline-none"
                     aria-label=".form-select-lg example"
-                    onChange={handleCity}
                   >
                     <option>Select your state</option>
                     {state_arr.map((state) => (
@@ -102,6 +198,9 @@ const Complaints = () => {
                     Select city
                   </label>
                   <select
+                    name="city"
+                    onChange={onChange}
+                    required
                     defaultValue="Select your city"
                     className="form-select form-select-lg mb-3
       appearance-none
@@ -139,7 +238,9 @@ const Complaints = () => {
                     The complaint is regarding:
                   </label>
                   <textarea
-                    name="message"
+                    name="complaintregarding"
+                    onChange={onChange}
+                    required
                     className="w-full bg-gray-100 bg-opacity-50 rounded border border-gray-300 focus:border-[#717984] focus:bg-white focus:ring-2 focus:ring-[#717984] h-32 text-base outline-none text-gray-700 py-1 px-3 resize-none leading-6 transition-colors duration-200 ease-in-out"
                   ></textarea>
                 </div>
@@ -153,7 +254,9 @@ const Complaints = () => {
                     The nature of complaint:
                   </label>
                   <textarea
-                    name="message"
+                    onChange={onChange}
+                    required
+                    name="complaintnature"
                     className="w-full bg-gray-100 bg-opacity-50 rounded border border-gray-300 focus:border-[#717984] focus:bg-white focus:ring-2 focus:ring-[#717984] h-32 text-base outline-none text-gray-700 py-1 px-3 resize-none leading-6 transition-colors duration-200 ease-in-out"
                   ></textarea>
                 </div>
@@ -169,7 +272,9 @@ const Complaints = () => {
                   </label>
                   <input
                     type="text"
-                    name="name"
+                    required
+                    onChange={onChange}
+                    name="companyname"
                     className="w-full bg-gray-100 bg-opacity-50 rounded border border-gray-300 focus:border-[#717984] focus:bg-white focus:ring-2 focus:ring-[#717984] text-base outline-none text-gray-700 py-1 px-3 leading-8 transition-colors duration-200 ease-in-out"
                   />
                 </div>
@@ -183,7 +288,9 @@ const Complaints = () => {
                     The specific details of the complaint:
                   </label>
                   <textarea
-                    name="message"
+                    name="details"
+                    required
+                    onChange={onChange}
                     className="w-full bg-gray-100 bg-opacity-50 rounded border border-gray-300 focus:border-[#717984] focus:bg-white focus:ring-2 focus:ring-[#717984] h-32 text-base outline-none text-gray-700 py-1 px-3 resize-none leading-6 transition-colors duration-200 ease-in-out"
                   ></textarea>
                 </div>
@@ -195,7 +302,7 @@ const Complaints = () => {
                 </button>
               </div>
             </div>
-          </div>
+          </form>
         </div>
       </section>
     </div>
